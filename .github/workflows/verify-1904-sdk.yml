@@ -1,0 +1,58 @@
+name: Verify 1904 SDKs
+on:
+  push:
+    branches: [verify/1904-sdk-checks]
+permissions:
+  contents: read
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        revision: ['6a970b1e8b806e940c1b9d22930714fd0175c75c']
+        include:
+          - python-version: '3.12'
+            revision: '7bf0d6b201194975bc76a7bc6da01718f76e1398'
+    defaults:
+      run:
+        working-directory: clients/python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ matrix.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e '.[dev]'
+      - run: ruff check src tests
+        if: matrix.python-version == '3.12'
+      - run: pytest -q
+  typescript:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['18', '20', '22']
+        revision: ['6a970b1e8b806e940c1b9d22930714fd0175c75c']
+        include:
+          - node-version: '20'
+            revision: '7bf0d6b201194975bc76a7bc6da01718f76e1398'
+    env:
+      TZ: America/Los_Angeles
+    defaults:
+      run:
+        working-directory: clients/typescript
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ matrix.revision }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
